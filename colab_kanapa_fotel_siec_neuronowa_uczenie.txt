@@ -1,0 +1,85 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+X = torch.Tensor(
+    [[200, 90],   #kanapa
+     [5, 3],      #kanapa
+     [22, 25],    #fotel
+     [75, 100]])  #fotel
+
+#10 kanapa, -10 fotel
+y = torch.Tensor([100, 100, -100, -100])
+
+model = nn.Sequential(
+    nn.Linear(2, 1, bias=False),
+)
+
+#początkowe wagi
+model[0].weight.data = torch.Tensor([[-8, 7]])
+
+funkcja_obliczania_bledu = nn.MSELoss()
+szybkosc_uczenia = 0.1
+optymalizator = optim.Adam(model.parameters(), lr=szybkosc_uczenia)
+liczba_epok = 1000
+
+bledy = []
+for epoch in range(liczba_epok):
+    suma_bledow = 0
+    for i in range(0, len(X)):
+        X_Wejsciowe = X[i].unsqueeze(0) #bierzemy tylko wiersz i
+        y_modelu = model(X_Wejsciowe)
+        y_danych_treningowych = y[i] #bierzemy tylko wiersz i
+        y_danych_treningowych = y_danych_treningowych.unsqueeze(0)
+        akt_blad = funkcja_obliczania_bledu(y_modelu, y_danych_treningowych)
+        optymalizator.zero_grad()
+        akt_blad.backward()
+        optymalizator.step()
+        suma_bledow += akt_blad.item()
+    sredni_blad = suma_bledow / len(X)
+    bledy.append(sredni_blad)
+
+wejscie = torch.Tensor([200, 90])
+wynik_modelu = model(wejscie)
+print(f"Wynik modelu dla wejścia {wejscie.tolist()}: {wynik_modelu.item():.2f}")
+wejscie = torch.Tensor([5, 3])
+wynik_modelu = model(wejscie)
+print(f"Wynik modelu dla wejścia {wejscie.tolist()}: {wynik_modelu.item():.2f}")
+wejscie = torch.Tensor([22, 25])
+wynik_modelu = model(wejscie)
+print(f"Wynik modelu dla wejścia {wejscie.tolist()}: {wynik_modelu.item():.2f}")
+wejscie = torch.Tensor([75, 100])
+wynik_modelu = model(wejscie)
+print(f"Wynik modelu dla wejścia {wejscie.tolist()}: {wynik_modelu.item():.2f}")
+print (f"Waga długość: {model[0].weight.data[0][0]}, Waga wysokość: {model[0].weight.data[0][1]}")
+
+
+#Zwizualizuj błąd
+import matplotlib.pyplot as plt
+plt.plot(bledy)
+plt.ylabel('Błąd')
+plt.xlabel('Epoka')
+plt.title("Szybkość uczenia %f"%(szybkosc_uczenia))
+plt.show()
+
+# Rysowanie punktów treningowych i linii modelu
+import matplotlib.pyplot as plt
+import numpy as np
+plt.scatter(X[:, 0], X[:, 1], c=y, cmap='bwr', label='Punkty treningowe')
+x_line = np.linspace(torch.min(X[:, 1]).item(), torch.max(X[:, 1]).item(), 100)
+y_line = (-model[0].weight[0, 0].detach().numpy() * x_line) / model[0].weight[0, 1].detach().numpy()
+plt.plot(x_line, y_line, color='red', label='Linia modelu')
+plt.xlabel('Szerokość')
+plt.ylabel('Wysokość')
+plt.legend()
+result = model[0].weight[0, 0].detach().numpy()
+w_dl = str(np.round(result, 3))
+result = model[0].weight[0, 1].detach().numpy()
+w_wys = str(np.round(result, 3))
+equation = f'0 = {w_dl} * długość + {w_wys} * wysokość '
+plt.text(60, 60, equation, fontsize=12)
+plt.title('Punkty treningowe i linia modelu')
+plt.show()
+
+
+
